@@ -69,7 +69,7 @@ def main() -> None:
             visual = Visual(map_data)
             visual.visualizer()
         except ImportError:
-            pass # Si pyplot manque, on ignore l'erreur pour ne pas bloquer l'éval
+            pass
 
     except ParsingError as e:
         print(e, file=sys.stderr)
