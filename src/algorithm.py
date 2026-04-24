@@ -54,7 +54,7 @@ class Router:
             # Réserver la zone
             self.zone_reservations[(zone, t)] = self.get_zone_occupancy(zone, t) + 1
 
-            # Réserver la connexion empruntée (si ce n'est pas le premier point)
+            # Si ce n'est pas le premier point
             if i > 0:
                 prev_zone, prev_t = path[i-1]
                 if zone != prev_zone:
@@ -117,11 +117,11 @@ class Router:
                 cost = neighbor_obj.get_movement_cost()
                 arrival_time = current_time + cost
                 
-                # Vérifier la capacité de la ZONE à l'arrivée
+                # Zone cap
                 if neighbor != end_zone and self.get_zone_occupancy(neighbor, arrival_time) >= neighbor_obj.max_drones:
                     continue
                 
-                # Vérifier la capacité de la CONNEXION pendant le mouvement
+                # CONNEXION cap
                 link_cap = self.map_data.get_connection_capacity(current_zone, neighbor)
                 edge_blocked = False
                 for t in range(current_time, arrival_time):

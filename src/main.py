@@ -60,16 +60,17 @@ def main() -> None:
                     turn_events[curr_t].append(f"D{drone_id}-{curr_zone}")
         for t in range(1, max_turns + 1):
             if t in turn_events and turn_events[t]:
-                # Turn 1  | D1-zoneA D2-zoneB
-                print(f"Turn {t:02d} | " + " ".join(turn_events[t]))
+                # \033[94m = Light Blue, \033[0m = Reset
+                print(f"\033[94mTurn {t:02d} |\033[0m " + " ".join(turn_events[t]))
 
-        print(f"Simulation completed in {max_turns} turns.")
+        print(f"\n\033[92mSimulation completed in {max_turns} turns.\033[0m")
 
         # Affichage graphique direct
         try:
             visual = Visual(map_data)
             visual.visualizer()
         except ImportError:
+            print("Import Error : Map not generated", file=sys.stderr)
             pass
 
     except ParsingError as e:
