@@ -60,7 +60,8 @@ def main() -> None:
                     turn_events[curr_t].append(f"D{drone_id}-{curr_zone}")
         for t in range(1, max_turns + 1):
             if t in turn_events and turn_events[t]:
-                print(" ".join(turn_events[t]))
+                # Turn 1  | D1-zoneA D2-zoneB
+                print(f"Turn {t:02d} | " + " ".join(turn_events[t]))
 
         print(f"Simulation completed in {max_turns} turns.")
 
@@ -74,6 +75,9 @@ def main() -> None:
     except ParsingError as e:
         print(e, file=sys.stderr)
         sys.exit(1)
+    except KeyboardInterrupt:
+        print("\nSimulation interrupted by user (Ctrl+C).", file=sys.stderr)
+        sys.exit(0)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)

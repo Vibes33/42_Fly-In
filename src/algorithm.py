@@ -140,4 +140,4 @@ class Router:
                     f_score = new_g + self.heuristic.get(neighbor, float('inf'))
                     heapq.heappush(pq, (f_score, -arrival_time, arrival_time, neighbor, state))
 
-        return None # Aucun chemin trouvé
+        return None
