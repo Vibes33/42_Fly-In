@@ -1,103 +1,98 @@
+import importlib
+import sys
 from src.models import MapData
 
-class TerminalVisualizer:
-    def __init__(self) -> None:
-        self.colors = {
-            "red": "\033[91m",
-            "green": "\033[92m",
-            "yellow": "\033[93m",
-            "blue": "\033[94m",
-            "gray": "\033[90m",
-            "reset": "\033[0m"
-        }
+class Visual:
+    def __init__(self, map_data: MapData):
+        self.map_data = map_data
+        self.positions = {}
+        self.node_colors = []
+        self.node_sizes = []
+        self.labels = {}
 
-    def draw_map(self, map_data: MapData) -> None:
-        print("🗺  Map Preview:")
-        for z_name, zone in map_data.zones.items():
-            color_code = self.colors.get(zone.color, self.colors["reset"]) if zone.color else self.colors["reset"]
-            cap = zone.max_drones if zone.zone_type != "start_hub" and zone.zone_type != "end_hub" else "inf"
-            print(f"{color_code}[{zone.zone_type}] {z_name} ({zone.x}, {zone.y}) Cap: {cap}{self.colors['reset']}")
-        print(f"Total Drones: {map_data.nb_drones}")
-        
-        self._draw_ascii_map(map_data)
-        print("\n--- Starting Simulation ---\n")
 
-    def _draw_ascii_map(self, map_data: MapData) -> None:
-        if not map_data.zones:
-            return
+    @staticmethod
+    def check_dependencies() -> dict:
+        status = {}
+        try:
+            import matplotlib
+            status["matplotlib"] = {"ok": True, "version": matplotlib.__version__, "desc": "Visualization"}
+        except ImportError:
+            status["matplotlib"] = {"ok": False, "version": "N/A", "desc": "Visualization"}
+        return status
 
-        print("\n🗺  Visual Grid Map:")
-        min_x = min(z.x for z in map_data.zones.values())
-        max_x = max(z.x for z in map_data.zones.values())
-        min_y = min(z.y for z in map_data.zones.values())
-        max_y = max(z.y for z in map_data.zones.values())
-
-        # On fait une grille avec des espaces intermédiaires pour les connexions.
-        # Donc la coordonnée réelle d'un noeud (x, y) devient la coordonnée de grille (x*2, y*2)
-        grid_width = (max_x - min_x) * 2 + 1
-        grid_height = (max_y - min_y) * 2 + 1
-
-        if grid_width > 150 or grid_height > 150:
-            print("Map too large to display visual grid.")
-            return
-
-        grid = [[" " for _ in range(grid_width)] for _ in range(grid_height)]
-        
-        # 1. Dessiner les connexions
-        for conn in map_data.connections:
-            z1 = map_data.zones.get(conn.zone1)
-            z2 = map_data.zones.get(conn.zone2)
-            
-            if not z1 or not z2:
-                continue
-                
-            x1, y1 = (z1.x - min_x) * 2, (z1.y - min_y) * 2
-            x2, y2 = (z2.x - min_x) * 2, (z2.y - min_y) * 2
-            
-            # Droite horizontale
-            if y1 == y2:
-                for i in range(min(x1, x2) + 1, max(x1, x2)):
-                    if grid[y1][i] == " ":
-                        grid[y1][i] = "-"
-            # Droite verticale
-            elif x1 == x2:
-                for i in range(min(y1, y2) + 1, max(y1, y2)):
-                    if grid[i][x1] == " ":
-                        grid[i][x1] = "|"
-            # Diagonale
+    @staticmethod
+    def show_status(status: dict) -> bool:
+        REQUIRED = { "matplotlib": "Visualization" }
+        all_ok = True
+        for pkg, info in status.items():
+            if info["ok"]:
+                pass # print(f"  [OK] {pkg} ({info['version']}) - {info['desc']} ready")
             else:
-                steps = max(abs(x2 - x1), abs(y2 - y1))
-                dx = (x2 - x1) / steps
-                dy = (y2 - y1) / steps
-                for i in range(1, steps):
-                    cx, cy = int(round(x1 + i * dx)), int(round(y1 + i * dy))
-                    if grid[cy][cx] == " ":
-                        if (dx > 0 and dy > 0) or (dx < 0 and dy < 0):
-                            grid[cy][cx] = "/"
-                        else:
-                            grid[cy][cx] = "\\"
+                print(f"  [MISSING] {pkg} - {info['desc']} NOT available")
+                all_ok = False
+        return all_ok
 
-        # 2. Dessiner les noeuds par-dessus
-        for z in map_data.zones.values():
-            color = self.colors.get(z.color, self.colors["reset"]) if z.color else self.colors["reset"]
+    def extract_rendering_data(self):        
+        start_hub = self.map_data.start_hub
+        end_hub = self.map_data.end_hub
+
+        for zone_name, zone_obj in self.map_data.zones.items():
+            self.positions[zone_name] = (zone_obj.x, zone_obj.y)
             
-            char = "O"
-            if z.zone_type == "blocked": char = "X"
-            elif z.zone_type == "restricted": char = "R"
-            elif z.zone_type == "priority": char = "P"
-            
-            if z.name == map_data.start_hub: char = "S"
-            if z.name == map_data.end_hub: char = "E"
-            
-            gy, gx = (z.y - min_y) * 2, (z.x - min_x) * 2
-            grid[gy][gx] = f"{color}{char}{self.colors['reset']}"
+            self.labels[zone_name] = zone_name
+
+            if zone_name == start_hub:
+                self.node_colors.append('lightgreen')
+            elif zone_name == end_hub:
+                self.node_colors.append('salmon')
+            elif zone_obj.zone_type == "blocked":
+                self.node_colors.append('black')
+            elif zone_obj.zone_type == "restricted":
+                self.node_colors.append('orange')
+            else:
+                self.node_colors.append('lightblue')
+
+            self.node_sizes.append(1000 if zone_name in (start_hub, end_hub) else 500)
+
+    def visualizer(self):
+        self.extract_rendering_data() 
         
-        # 3. Afficher de haut en bas
-        for y in range(grid_height - 1, -1, -1):
-            row_str = "".join(grid[y][x] + " " for x in range(grid_width))
-            # On n'affiche pas la ligne si elle est totalement vide pour compacter
-            if row_str.strip(): 
-                print(row_str)
+        import matplotlib.pyplot as plt
+
+        # Désactiver la barre d'outils avec ses modificateurs (loupe, sauvegarde, etc.)
+        plt.rcParams['toolbar'] = 'None'
+
+        # Création de la figure (la fenêtre séparée)
+        fig, ax = plt.subplots(figsize=(10, 8))
+        fig.canvas.manager.set_window_title('Fly-In - Visualisateur de Carte')
+        ax.set_title(f"Fly-In Map : {self.map_data.nb_drones} Drones prévus", fontsize=14, fontweight='bold', pad=20)
+
+        # 1. Tracer les connexions (les lignes)
+        for conn in self.map_data.connections:
+            if conn.zone1 in self.positions and conn.zone2 in self.positions:
+                x1, y1 = self.positions[conn.zone1]
+                x2, y2 = self.positions[conn.zone2]
                 
-        print("\nLegend: S=Start E=End O=Normal R=Restricted P=Priority X=Blocked")
-        print("-" * 50)
+                # zorder=1 pour dessiner les lignes EN DESSOUS des points
+                ax.plot([x1, x2], [y1, y2], color='gray', linestyle='dashed', linewidth=2, zorder=1)
+
+        # 2. Tracer les zones (les points)
+        # On récupère les coordonées (X, Y) dans l'ordre d'itération originel
+        x_coords = [self.positions[zone][0] for zone in self.map_data.zones.keys()]
+        y_coords = [self.positions[zone][1] for zone in self.map_data.zones.keys()]
+        
+        # zorder=2 pour passer au-dessus des lignes
+        ax.scatter(x_coords, y_coords, s=self.node_sizes, c=self.node_colors, 
+                   edgecolors='black', linewidths=1.5, zorder=2)
+
+        # 3. Ajouter les labels (les noms des zones à l'intérieur des cercles)
+        for zone_name, (x, y) in self.positions.items():
+            ax.text(x, y, zone_name, fontsize=9, ha='center', va='center', fontweight='bold', zorder=3)
+
+        # Esthétique : masquer la bordure et les chiffres d'un graphique mathématique
+        ax.axis('off')
+
+        # Affichage
+        plt.tight_layout()
+        plt.show()

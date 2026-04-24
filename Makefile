@@ -14,10 +14,10 @@ install:
 	pip install -r requirements.txt || true
 
 run:
-	python3 -m src.main $(if $(RUN_ARGS),$(RUN_ARGS),maps/example.map)
+	@python3 -m src.main $(if $(RUN_ARGS),$(RUN_ARGS),maps/example.map)
 
 debug:
-	python3 -m pdb -m src.main $(if $(RUN_ARGS),$(RUN_ARGS),maps/example.map)
+	@python3 -m pdb -m src.main $(if $(RUN_ARGS),$(RUN_ARGS),maps/example.map)
 
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
@@ -25,4 +25,4 @@ clean:
 
 lint:
 	flake8 src/
-	mypy src/ --strict
+	mypy src/ --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs

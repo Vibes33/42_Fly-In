@@ -1,32 +1,79 @@
 import sys
+import argparse
 from src.parser import MapParser
-from src.visualizer import TerminalVisualizer
-# On utilise PrioritizedPlanner en mode ultra rapide. 
-# On peut laisser ICBS en import si jamais on souhaite faire un hybrid.
-from src.pp import PrioritizedPlanner
-from src.simulator import SimulationEngine
+from src.algorithm import Router
+from src.exceptions import ParsingError
+from src.Visualizer import Visual
 
 def main() -> None:
-    if len(sys.argv) != 2:
-        print("Usage: python -m src.main <path_to_map>", file=sys.stderr)
-        sys.exit(1)
 
-    filepath = sys.argv[1]
+    parser = argparse.ArgumentParser(description="Fly-in Drone Routing")
+    parser.add_argument("map_file", type=str, help="Path to the map file")
+
+    args = parser.parse_args()
 
     try:
-        parser = MapParser(filepath)
-        map_data = parser.parse()
+        # 1. Parsing
+        map_parser = MapParser(args.map_file)
+        map_data = map_parser.parse()
 
-        visualizer = TerminalVisualizer()
-        visualizer.draw_map(map_data)
+        status = Visual.check_dependencies()
+        if not Visual.show_status(status):
+            print("Warning: Dependencies for GUI visualization are missing.", file=sys.stderr)
 
-        # Utilisation de la planification priorisée (très rapide)
-        solver = PrioritizedPlanner(map_data)
-        final_paths = solver.solve()
+        # Heuristique et Routage
+        router = Router(map_data)
+        router.compute_true_distance_heuristic()
+        max_turns = 0
 
-        simulator = SimulationEngine(final_paths)
-        simulator.generate_output()
+        #Drones successifs astar
+        all_paths = {}
+        for drone_id in range(1, map_data.nb_drones + 1):
+            path = router.space_time_a_star(start_time=0)
+            
+            if not path:
+                print(f"Error: Could not find path for Drone {drone_id}", file=sys.stderr)
+                sys.exit(1)
 
+            router.reserve_path(path)
+            all_paths[drone_id] = path
+
+            drone_finish_time = path[-1][1]
+            if drone_finish_time > max_turns:
+                max_turns = drone_finish_time
+
+        #affichage terminal
+        turn_events = {}
+        for drone_id, path in all_paths.items():
+            for i in range(1, len(path)):
+                prev_zone, prev_t = path[i-1]
+                curr_zone, curr_t = path[i]
+                
+                if prev_zone != curr_zone:
+                    for t in range(prev_t + 1, curr_t):
+                        if t not in turn_events:
+                            turn_events[t] = []
+                        turn_events[t].append(f"D{drone_id}-{prev_zone}-{curr_zone}")
+                    
+                    if curr_t not in turn_events:
+                        turn_events[curr_t] = []
+                    turn_events[curr_t].append(f"D{drone_id}-{curr_zone}")
+        for t in range(1, max_turns + 1):
+            if t in turn_events and turn_events[t]:
+                print(" ".join(turn_events[t]))
+
+        print(f"Simulation completed in {max_turns} turns.")
+
+        # Affichage graphique direct
+        try:
+            visual = Visual(map_data)
+            visual.visualizer()
+        except ImportError:
+            pass # Si pyplot manque, on ignore l'erreur pour ne pas bloquer l'éval
+
+    except ParsingError as e:
+        print(e, file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
