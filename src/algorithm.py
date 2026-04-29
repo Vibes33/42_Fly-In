@@ -1,6 +1,7 @@
 import heapq
-from typing import Dict, List, Tuple, Set, Optional
+from typing import Dict, List, Tuple, Optional
 from src.models import MapData
+
 
 class Router:
     def __init__(self, map_data: MapData):
@@ -18,10 +19,12 @@ class Router:
         if not end_hub:
             return
 
-        self.heuristic = {zone: float('inf') for zone in self.map_data.zones}
+        self.heuristic = {
+            zone: float('inf') for zone in self.map_data.zones
+        }
         self.heuristic[end_hub] = 0.0
 
-        #priority queue, distance, nom de zone
+        # priority queue, distance, nom de zone
         pq = [(0.0, end_hub)]
 
         while pq:
@@ -52,29 +55,39 @@ class Router:
     def reserve_path(self, path: List[Tuple[str, int]]) -> None:
         for i, (zone, t) in enumerate(path):
             # Réserver la zone
-            self.zone_reservations[(zone, t)] = self.get_zone_occupancy(zone, t) + 1
+            zone_occupancy = self.get_zone_occupancy(zone, t)
+            self.zone_reservations[(zone, t)] = zone_occupancy + 1
 
             # Si ce n'est pas le premier point
             if i > 0:
-                prev_zone, prev_t = path[i-1]
+                prev_zone, prev_t = path[i - 1]
                 if zone != prev_zone:
                     edge = tuple(sorted([prev_zone, zone]))
                     for edge_time in range(prev_t, t):
-                        self.edge_reservations[(edge[0], edge[1], edge_time)] = \
-                            self.edge_reservations.get((edge[0], edge[1], edge_time), 0) + 1
+                        key = (edge[0], edge[1], edge_time)
+                        self.edge_reservations[key] = (
+                            self.edge_reservations.get(key, 0) + 1
+                        )
 
-    def space_time_a_star(self, start_time: int = 0) -> Optional[List[Tuple[str, int]]]:
+    def space_time_a_star(
+        self, start_time: int = 0
+    ) -> Optional[List[Tuple[str, int]]]:
         start_zone = self.map_data.start_hub
         end_zone = self.map_data.end_hub
         if not start_zone or not end_zone:
             return None
 
-        pq = [(self.heuristic[start_zone], 0, start_time, start_zone, None)]
+        pq = [
+            (self.heuristic[start_zone], 0, start_time, start_zone, None)
+        ]
 
-        # (zone_name, time), fil d'Ariane -> classe du meilleur au moins bon avec f = g + h
+        # (zone_name, time), fil d'Ariane -> classe du meilleur au moins
+        # bon avec f = g + h
         came_from: Dict[Tuple[str, int], Tuple[str, int]] = {}
         # (zone, temps) -> g_score -> temps
-        g_scores: Dict[Tuple[str, int], int] = {(start_zone, start_time): 0}
+        g_scores: Dict[Tuple[str, int], int] = {
+            (start_zone, start_time): 0
+        }
 
         while pq:
             _, _, current_time, current_zone, parent = heapq.heappop(pq)
@@ -93,20 +106,33 @@ class Router:
                 path.append((start_zone, start_time))
                 return path[::-1]
 
-            if current_time > 1000:  
+            if current_time > 1000:
                 continue
 
             # Option 1: Attendre sur place (Temps + 1)
             next_time = current_time + 1
             zone_obj = self.map_data.zones[current_zone]
-            
-            if current_zone in (start_zone, end_zone) or self.get_zone_occupancy(current_zone, next_time) < zone_obj.max_drones:
+
+            occ = self.get_zone_occupancy(current_zone, next_time)
+            if (
+                current_zone in (start_zone, end_zone)
+                or occ < zone_obj.max_drones
+            ):
                 wait_state = (current_zone, next_time)
                 new_g = g_scores[state] + 1
                 if new_g < g_scores.get(wait_state, float('inf')):
                     g_scores[wait_state] = new_g
                     f_score = new_g + self.heuristic[current_zone]
-                    heapq.heappush(pq, (f_score, -next_time, next_time, current_zone, state))
+                    heapq.heappush(
+                        pq,
+                        (
+                            f_score,
+                            -next_time,
+                            next_time,
+                            current_zone,
+                            state,
+                        ),
+                    )
 
             # Option 2: Se déplacer vers un voisin
             for neighbor in self.map_data.get_neighbors(current_zone):
@@ -116,19 +142,28 @@ class Router:
 
                 cost = neighbor_obj.get_movement_cost()
                 arrival_time = current_time + cost
-                
+
                 # Zone cap
-                if neighbor != end_zone and self.get_zone_occupancy(neighbor, arrival_time) >= neighbor_obj.max_drones:
+                neighbor_occ = self.get_zone_occupancy(neighbor, arrival_time)
+                if (
+                    neighbor != end_zone
+                    and neighbor_occ >= neighbor_obj.max_drones
+                ):
                     continue
-                
+
                 # CONNEXION cap
-                link_cap = self.map_data.get_connection_capacity(current_zone, neighbor)
+                link_cap = self.map_data.get_connection_capacity(
+                    current_zone, neighbor
+                )
                 edge_blocked = False
                 for t in range(current_time, arrival_time):
-                    if self.get_edge_occupancy(current_zone, neighbor, t) >= link_cap:
+                    if (
+                        self.get_edge_occupancy(current_zone, neighbor, t)
+                        >= link_cap
+                    ):
                         edge_blocked = True
                         break
-                
+
                 if edge_blocked:
                     continue
 
@@ -137,7 +172,18 @@ class Router:
 
                 if new_g < g_scores.get(move_state, float('inf')):
                     g_scores[move_state] = new_g
-                    f_score = new_g + self.heuristic.get(neighbor, float('inf'))
-                    heapq.heappush(pq, (f_score, -arrival_time, arrival_time, neighbor, state))
+                    f_score = (
+                        new_g + self.heuristic.get(neighbor, float('inf'))
+                    )
+                    heapq.heappush(
+                        pq,
+                        (
+                            f_score,
+                            -arrival_time,
+                            arrival_time,
+                            neighbor,
+                            state,
+                        ),
+                    )
 
         return None

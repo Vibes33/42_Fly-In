@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+
 @dataclass
 class Zone:
     name: str
@@ -18,11 +19,13 @@ class Zone:
             return 2
         return 1
 
+
 @dataclass
 class Connection:
     zone1: str
     zone2: str
     max_link_capacity: int = 1
+
 
 @dataclass
 class MapData:
@@ -38,6 +41,8 @@ class MapData:
 
     def get_connection_capacity(self, z1: str, z2: str) -> int:
         for conn in self.connections:
-            if (conn.zone1 == z1 and conn.zone2 == z2) or (conn.zone1 == z2 and conn.zone2 == z1):
+            if (conn.zone1 == z1 and conn.zone2 == z2) or (
+                conn.zone1 == z2 and conn.zone2 == z1
+            ):
                 return conn.max_link_capacity
         return 1

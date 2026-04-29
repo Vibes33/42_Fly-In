@@ -11,7 +11,7 @@ endif
 .PHONY: install run debug clean lint
 
 install:
-	pip install -r requirements.txt || true
+	python3 -m pip install -r requirements.txt || true
 
 run:
 	@python3 -m src.main $(if $(RUN_ARGS),$(RUN_ARGS),maps/example.map)
