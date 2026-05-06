@@ -10,6 +10,8 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description="Fly-in Drone Routing")
     parser.add_argument("map_file", type=str, help="Path to the map file")
+    parser.add_argument("--capacity-info", action="store_true",
+                        help="Displays capacity info")
 
     args = parser.parse_args()
 
@@ -67,7 +69,11 @@ def main() -> None:
                     if curr_t not in turn_events:
                         turn_events[curr_t] = []
                     turn_events[curr_t].append(f"D{drone_id}-{curr_zone}")
-        for t in range(1, max_turns + 1):
+
+        if args.capacity_info:
+            from src.exceptions import args as display_capacity_args
+            display_capacity_args(map_data, all_paths, max_turns, turn_events)
+
             if t in turn_events and turn_events[t]:
                 # \033[94m = Light Blue, \033[0m = Reset
                 print(
