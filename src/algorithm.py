@@ -25,7 +25,7 @@ class Router:
         self.heuristic[end_hub] = 0.0
 
         # priority queue, distance, nom de zone
-        pq = [(0.0, end_hub)]
+        pq: List[Tuple[float, str]] = [(0.0, end_hub)]
 
         while pq:
             current_dist, current_zone = heapq.heappop(pq)
@@ -77,14 +77,11 @@ class Router:
         if not start_zone or not end_zone:
             return None
 
-        pq = [
+        pq: List[Tuple[float, int, int, str, Optional[Tuple[str, int]]]] = [
             (self.heuristic[start_zone], 0, start_time, start_zone, None)
         ]
 
-        # (zone_name, time), fil d'Ariane -> classe du meilleur au moins
-        # bon avec f = g + h
         came_from: Dict[Tuple[str, int], Tuple[str, int]] = {}
-        # (zone, temps) -> g_score -> temps
         g_scores: Dict[Tuple[str, int], int] = {
             (start_zone, start_time): 0
         }
@@ -97,7 +94,6 @@ class Router:
                 came_from[state] = parent
 
             if current_zone == end_zone:
-                # Reconstruire le chemin
                 path = []
                 curr = state
                 while curr in came_from:

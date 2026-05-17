@@ -1,13 +1,14 @@
 from src.models import MapData
+from typing import Dict, List, Tuple
 
 
 class Visual:
     def __init__(self, map_data: MapData):
         self.map_data = map_data
-        self.positions = {}
-        self.node_colors = []
-        self.node_sizes = []
-        self.labels = {}
+        self.positions: Dict[str, Tuple[float, float]] = {}
+        self.node_colors: List[str] = []
+        self.node_sizes: List[int] = []
+        self.labels: Dict[str, str] = {}
 
     @staticmethod
     def check_dependencies() -> dict:
@@ -36,7 +37,7 @@ class Visual:
                 all_ok = False
         return all_ok
 
-    def extract_rendering_data(self):
+    def extract_rendering_data(self) -> None:
         start_hub = self.map_data.start_hub
         end_hub = self.map_data.end_hub
 
@@ -45,7 +46,12 @@ class Visual:
 
             self.labels[zone_name] = zone_name
 
-            if zone_name == start_hub:
+            if zone_obj.color:
+                if zone_obj.color == 'rainbow':
+                    self.node_colors.append('fuchsia')
+                else:
+                    self.node_colors.append(zone_obj.color)
+            elif zone_name == start_hub:
                 self.node_colors.append('lightgreen')
             elif zone_name == end_hub:
                 self.node_colors.append('salmon')
@@ -62,16 +68,17 @@ class Visual:
                 else 500
             )
 
-    def visualizer(self):
+    def visualizer(self) -> None:
         self.extract_rendering_data()
 
         import matplotlib.pyplot as plt
         plt.rcParams['toolbar'] = 'None'
 
         fig, ax = plt.subplots(figsize=(10, 8))
-        fig.canvas.manager.set_window_title(
-            'Fly-In - Visualisateur de Carte'
-        )
+        if fig.canvas.manager:
+            fig.canvas.manager.set_window_title(
+                'Fly-In - Visualisateur de Carte'
+            )
         ax.set_title(
             f"Fly-In Map : {self.map_data.nb_drones} Drones prévus",
             fontsize=14,
