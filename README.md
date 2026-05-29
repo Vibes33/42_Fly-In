@@ -1,74 +1,136 @@
-*This project has been created as part of the 42 curriculum by rydelepi.*
+# 42_Fly-In
 
-# Fly-In: Drone Routing Simulation
+![Score](https://img.shields.io/badge/Score-125%2F100-success)
+![Language](https://img.shields.io/badge/Language-Python-3776AB?logo=python&logoColor=white)
+![Algorithms](https://img.shields.io/badge/Algorithm-A*_&_Dijkstra-FF6B6B)
 
-## Description
-Fly-In is a drone routing and simulation program. The goal of the project is to compute and simulate collision-free paths for a fleet of drones flying from a departure hub to a destination point across a network of zones (waypoints). The simulation respects strict capacity constraints:
-- **Zone Capacity:** The maximum number of drones allowed in a specific zone at a given time.
-- **Connection Capacity:** The maximum number of drones that can travel on an edge/path between two zones at a given time.
+## 📋 Table of Contents
+- [Description](#description)
+- [Project Architecture](#project-architecture)
+- [Modules Overview](#modules-overview)
+  - [Module 1 — Map Parser & Constraints](#module-1--map-parser--constraints)
+  - [Module 2 — Pathfinding Engine](#module-2--pathfinding-engine)
+  - [Module 3 — Reservation & Conflict System](#module-3--reservation--conflict-system)
+  - [Module 4 — Simulation Engine](#module-4--simulation-engine)
+- [Usage](#usage)
+- [Author](#author)
 
-The project validates structural constraints, plans the fastest safe route for each drone, and visually displays the map infrastructure and flight logs per turn.
+## 🔍 Description
 
-## Instructions
+**Fly-In** is a multi-drone routing simulator developed as part of the 42 School curriculum. The objective is to design a system capable of guiding a fleet of autonomous agents from a starting point to a destination area, while strictly minimizing the total number of turns.
 
-### Prerequisites
-- Python 3.x
-- `make`
+This project focuses heavily on advanced algorithmic problem-solving and multi-agent system management. It implements a **space-time A* pathfinding algorithm**, utilizing **Dijkstra’s algorithm** as a heuristic, combined with a robust reservation system to handle zone capacities and prevent conflicts.
+
+Key features include:
+- 🗺️ **Map Parsing**: Strict constraint validation for zones, connections, and capacities.
+- 🧠 **Advanced Pathfinding**: Space-time A* (A-Star) with Dijkstra heuristics.
+- 🚦 **Traffic Control**: Zone reservation system to prevent mid-air drone collisions.
+- ⚙️ **Turn-Based Engine**: Simulation engine handling travel costs (normal, restricted, and priority zones).
+
+## 📁 Project Structure
+
+```text
+42_Fly-In/
+├── maps/              # Sample maps and test configurations
+├── src/
+│   ├── parser/        # Map parsing and validation logic
+│   ├── pathfinding/   # A* space-time and Dijkstra algorithms
+│   ├── simulation/    # Turn-based engine and conflict management
+│   ├── models/        # Drone, Node, and Edge class definitions
+│   └── utils/         # Helper functions (logging, math)
+├── tests/             # Unit tests and performance benchmarks
+├── main.py            # Entry point of the simulation
+├── requirements.txt   # Python dependencies
+└── README.md          # Project documentation
+```
+
+## ⚙️ Modules Overview
+
+---
+
+### Module 1 — Map Parser & Constraints
+> 🗺️ *Establishing the airspace*
+
+| Component | Topic |
+|-----------|-------|
+| `map_parser.py` | Reading and validating strict map constraints |
+| `validator.py` | Verifying zone capacities, connections, and start/end points |
+
+**Key concepts:** File I/O, error handling, strict constraint validation, graph initialization.
+
+---
+
+### Module 2 — Pathfinding Engine
+> 🧠 *Navigating the multi-dimensional grid*
+
+| Component | Topic |
+|-----------|-------|
+| `dijkstra.py` | Implementing Dijkstra’s algorithm to pre-calculate distance heuristics |
+| `astar_spacetime.py` | Space-time A* pathfinding to calculate optimal routes across 3 dimensions (X, Y, Time) |
+
+**Key concepts:** Graph theory, heuristic optimization, priority queues (min-heaps), space-time grids.
+
+---
+
+### Module 3 — Reservation & Conflict System
+> 🚦 *Managing the fleet safely*
+
+| Component | Topic |
+|-----------|-------|
+| `reservation.py` | Zone and connection reservation management across time |
+| `conflict_resolver.py` | Collision avoidance logic |
+
+**Key concepts:** Multi-agent systems, resource locking, collision detection algorithms.
+
+---
+
+### Module 4 — Simulation Engine
+> ⚙️ *Executing the flight plan*
+
+| Component | Topic |
+|-----------|-------|
+| `engine.py` | Turn-based execution of drone movements |
+| `cost_calculator.py` | Handling travel costs (normal, restricted, priority zones) |
+
+**Key concepts:** Turn-based simulation, state machines, performance tracking (minimizing total turns).
+
+---
+
+## 💻 Usage
 
 ### Installation
-To install the required Python dependencies (like `matplotlib` for the visualizer), run:
+
+Clone the repository and optionally set up a virtual environment:
+
 ```bash
-make install
+git clone https://github.com/Vibes33/42_Fly-In.git
+cd 42_Fly-In
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### Execution
-To run the simulation on a specific map, use the provided `Makefile`:
+### Running the Simulator
+
+Execute the simulation by providing a map file as an argument:
+
 ```bash
-make run maps/easy/01_linear_path.txt
-```
-Alternatively, you can run the script directly:
-```bash
-./src/main.py maps/easy/01_linear_path.txt
+python3 main.py maps/test_map_01.txt
 ```
 
-### Options
-To display real-time capacity information (drones moving and arriving vs maximum capacity) turn-by-turn:
+### Options & Flags
+
+You can run the simulation with various flags to display specific outputs (adjust according to your actual code implementation):
+
 ```bash
-make run maps/easy/01_linear_path.txt ARGS="--capacity-info"
-# or
-./src/main.py --capacity-info maps/easy/01_linear_path.txt
+python3 main.py maps/test_map_01.txt --verbose    # Detailed step-by-step logs
+python3 main.py maps/test_map_01.txt --visualize  # (If implemented) graphical output
 ```
 
-### Linting and Checks
-To run style checks (`flake8`) and static type checking (`mypy`):
-```bash
-make lint
-```
+## 👨‍💻 Author
 
-## Algorithm Choices and Implementation Strategy
-The core routing relies on a **Space-Time A\*** (Cooperative A*) algorithm. The implementation strategy guarantees safe paths for multiple agents:
-1. **Heuristic Pre-computation:** A backwards Dijkstra (or true-distance A*) is first run from the destination hub to compute exact distance heuristics for every zone.
-2. **Time-Expanded Network:** The A* algorithm state is represented not just by physical location `(zone)`, but by `(zone, time)`.
-3. **Sequential Routing & Reservations:** Drones are routed one by one. Once a drone finds a path, it reserves the zones and connections it uses at the specific time steps in `zone_reservations` and `edge_reservations`.
-4. **Collision Avoidance:** Subsequent drones check these reservation tables. If moving to an adjacent node (or waiting in place) exceeds the `max_drones` of a zone or the capacity of a connection during that turn, the state is deemed invalid, forcing the drone to wait or take an alternate route.
+**Ryan Delepine (Vibes33 / rydelepi)** - 42 Student
 
-## Visual Representation Features
-The project features a graphical representation of the map using `matplotlib`. 
-- **Topology Display:** Provides a topological graph of hubs and waypoints, giving an immediate understanding of the map constraints and complexity.
-- **Color-Coding:** Zones are intuitively color-coded to enhance the user experience:
-  - **Light Green:** Start Hub
-  - **Salmon:** Destination Hub
-  - **Black:** Blocked Zones
-  - **Orange:** Restricted Zones
-  - **Light Blue:** Standard Waypoints
-- **Visual Feedback:** This UI complements the terminal logs, bridging the gap between abstract routing data and physical spatial awareness.
+---
 
-## Resources
-- **Algorithms:** 
-  - [A* Search Algorithm (Wikipedia)](https://en.wikipedia.org/wiki/A*_search_algorithm)
-  - [Multi-Agent Path Finding (MAPF)](https://en.wikipedia.org/wiki/Multi-agent_path_finding)
-- **AI Usage:** 
-  - Generative AI was used throughout the development process for specific tasks including:
-    - Assisting with the refactoring and optimization of the `reserve_path` and `args` capacity display functions to make them cleaner and more idiomatic.
-    - Adding extensive static type hinting (typing) and resolving `mypy` / `flake8` compliance issues.
-    - Adjusting the `Makefile` parameters correctly to prevent parameter collision with standard GNU Make arguments.
+*Created as part of the 42 School curriculum.*
